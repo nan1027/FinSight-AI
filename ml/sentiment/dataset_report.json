@@ -1,0 +1,67 @@
+{
+  "row_count": 2264,
+  "column_names": [
+    "sentence",
+    "label"
+  ],
+  "text_column": "sentence",
+  "label_column": "label",
+  "label_values": [
+    "positive",
+    "neutral",
+    "negative"
+  ],
+  "class_counts": {
+    "positive": 570,
+    "neutral": 1391,
+    "negative": 303
+  },
+  "class_percentages": {
+    "positive": 25.1767,
+    "neutral": 61.4399,
+    "negative": 13.3834
+  },
+  "missing_values": {
+    "total_missing_values": 0,
+    "missing_text": 0,
+    "missing_labels": 0
+  },
+  "duplicate_counts": {
+    "complete_duplicates": 5,
+    "duplicated_text_entries": 5,
+    "duplicated_text_with_conflicting_labels": 0
+  },
+  "text_length_statistics": {
+    "min": 9,
+    "max": 315,
+    "average": 121.96245583038869,
+    "median": 111.0,
+    "empty_strings": 0,
+    "whitespace_only_strings": 0
+  },
+  "labels_normalized_consistently": true,
+  "expected_three_class_categories": true,
+  "malformed_records": [],
+  "representative_examples": {
+    "positive": [
+      "For the last quarter of 2010 , Componenta 's net sales doubled to EUR131m from EUR76m for the same period a year earlier , while it moved to a zero pre-tax profit from a pre-tax loss of EUR7m .",
+      "In the third quarter of 2010 , net sales increased by 5.2 % to EUR 205.5 mn , and operating profit by 34.9 % to EUR 23.5 mn .",
+      "Operating profit rose to EUR 13.1 mn from EUR 8.7 mn in the corresponding period in 2007 representing 7.7 % of net sales ."
+    ],
+    "neutral": [
+      "According to Gran , the company has no plans to move all production to Russia , although that is where the company is growing .",
+      "At the request of Finnish media company Alma Media 's newspapers , research manager Jari Kaivo-oja at the Finland Futures Research Centre at the Turku School of Economics has drawn up a future scenario for Finland 's national economy by using a model developed by the University of Denver .",
+      "STOCK EXCHANGE ANNOUNCEMENT 20 July 2006 1 ( 1 ) BASWARE SHARE SUBSCRIPTIONS WITH WARRANTS AND INCREASE IN SHARE CAPITAL A total of 119 850 shares have been subscribed with BasWare Warrant Program ."
+    ],
+    "negative": [
+      "Jan. 6 -- Ford is struggling in the face of slowing truck and SUV sales and a surfeit of up-to-date , gotta-have cars .",
+      "Pharmaceuticals group Orion Corp reported a fall in its third-quarter earnings that were hit by larger expenditures on R&D and marketing .",
+      "However , the growth margin slowed down due to the financial crisis ."
+    ]
+  },
+  "dataset_source": {
+    "path": "data\\raw\\financial_phrasebank\\financial_phrasebank.csv",
+    "format_used": "CSV",
+    "notes": "This project uses the canonical Financial PhraseBank CSV exported from the official archive in data/raw/financial_phrasebank/financial_phrasebank.csv. No additional metadata columns are present in the final project dataset file; only sentence and label are used."
+  }
+}

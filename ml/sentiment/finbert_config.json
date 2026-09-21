@@ -1,0 +1,53 @@
+{
+  "model_name": "ProsusAI/finbert",
+  "tokenizer_class": "BertTokenizerFast",
+  "model_class": "BertForSequenceClassification",
+  "project_labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "model_label_order": [
+    "positive",
+    "negative",
+    "neutral"
+  ],
+  "model_config": {
+    "architectures": [
+      "BertForSequenceClassification"
+    ],
+    "model_type": "bert",
+    "id2label": {
+      "0": "positive",
+      "1": "negative",
+      "2": "neutral"
+    },
+    "label2id": {
+      "positive": 0,
+      "negative": 1,
+      "neutral": 2
+    },
+    "hidden_size": 768,
+    "num_hidden_layers": 12,
+    "num_attention_heads": 12,
+    "max_position_embeddings": 512
+  },
+  "label_mapping": {
+    "0": "positive",
+    "1": "negative",
+    "2": "neutral"
+  },
+  "tokenizer_smoke_test": {
+    "batch_size": 3,
+    "sequence_length": 17,
+    "logits_shape": [
+      3,
+      3
+    ],
+    "predictions": {
+      "negative": "negative",
+      "neutral": "positive",
+      "positive": "positive"
+    }
+  }
+}

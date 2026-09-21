@@ -1,0 +1,54 @@
+{
+  "random_seed": 42,
+  "split_ratios": {
+    "train": 0.8,
+    "validation": 0.1,
+    "test": 0.1
+  },
+  "original_row_count": 2264,
+  "train_row_count": 1811,
+  "validation_row_count": 227,
+  "test_row_count": 226,
+  "class_counts": {
+    "train": {
+      "negative": 242,
+      "neutral": 1113,
+      "positive": 456
+    },
+    "validation": {
+      "negative": 30,
+      "neutral": 140,
+      "positive": 57
+    },
+    "test": {
+      "negative": 31,
+      "neutral": 138,
+      "positive": 57
+    }
+  },
+  "class_percentages": {
+    "train": {
+      "negative": 13.3628,
+      "neutral": 61.4578,
+      "positive": 25.1795
+    },
+    "validation": {
+      "negative": 13.2159,
+      "neutral": 61.674,
+      "positive": 25.1101
+    },
+    "test": {
+      "negative": 13.7168,
+      "neutral": 61.0619,
+      "positive": 25.2212
+    }
+  },
+  "duplicate_leakage_checks": {
+    "duplicate_text_entries": 5,
+    "train_validation_overlap": false,
+    "train_test_overlap": false,
+    "validation_test_overlap": false
+  },
+  "text_column_source": "sentence",
+  "label_column_source": "label"
+}

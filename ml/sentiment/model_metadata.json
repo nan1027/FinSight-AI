@@ -1,0 +1,111 @@
+{
+  "model_name": "ProsusAI/finbert",
+  "pretrained_model_name": "ProsusAI/finbert",
+  "model_version": "finbert_phrasebank_v1",
+  "task": "financial-sentiment-classification",
+  "framework": "PyTorch + Transformers",
+  "tokenizer": "BertTokenizerFast",
+  "max_sequence_length": 128,
+  "label_mapping": {
+    "negative": 1,
+    "neutral": 2,
+    "positive": 0
+  },
+  "inverse_label_mapping": {
+    "1": "negative",
+    "2": "neutral",
+    "0": "positive"
+  },
+  "feature/input_type": "sentence-level financial text",
+  "training_seed": 42,
+  "training_epochs": 3,
+  "batch_size": 8,
+  "learning_rate": 2e-05,
+  "weight_decay": 0.01,
+  "training_sample_count": 1811,
+  "validation_sample_count": 227,
+  "test_sample_count": 226,
+  "validation_metrics": {
+    "epoch": 1,
+    "macro_f1": 0.9830409356725146,
+    "accuracy": 0.986784140969163,
+    "macro_precision": 0.9773946360153257,
+    "macro_recall": 0.9806599832915622,
+    "per_class": {
+      "positive": {
+        "precision": 0.9655172413793104,
+        "recall": 0.9824561403508771,
+        "f1": 0.9739130434782609,
+        "support": 57
+      },
+      "negative": {
+        "precision": 0.9666666666666667,
+        "recall": 0.9666666666666667,
+        "f1": 0.9666666666666667,
+        "support": 30
+      },
+      "neutral": {
+        "precision": 1.0,
+        "recall": 0.9928571428571429,
+        "f1": 0.996415770609319,
+        "support": 140
+      }
+    },
+    "confusion_matrix": [
+      [56, 1, 0],
+      [1, 29, 0],
+      [1, 0, 139]
+    ]
+  },
+  "test_metrics": {
+    "test_sample_count": 226,
+    "accuracy": 0.9778761061946902,
+    "macro_precision": 0.9698471788934273,
+    "macro_recall": 0.9761529817999884,
+    "macro_f1": 0.972886878905732,
+    "weighted_precision": 0.9782610134199172,
+    "weighted_recall": 0.9778761061946902,
+    "weighted_f1": 0.9779640894622775,
+    "per_class_metrics": {
+      "negative": {
+        "precision": 0.967741935483871,
+        "recall": 0.967741935483871,
+        "f1": 0.967741935483871,
+        "support": 31
+      },
+      "neutral": {
+        "precision": 0.9926470588235294,
+        "recall": 0.9782608695652174,
+        "f1": 0.9854014598540146,
+        "support": 138
+      },
+      "positive": {
+        "precision": 0.9491525423728814,
+        "recall": 0.9824561403508771,
+        "f1": 0.9655172413793104,
+        "support": 57
+      }
+    },
+    "confusion_matrix": [
+      [30, 0, 1],
+      [1, 135, 2],
+      [0, 1, 56]
+    ],
+    "label_mapping": {
+      "positive": 0,
+      "negative": 1,
+      "neutral": 2
+    },
+    "class_order": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "correct_predictions": 221,
+    "incorrect_predictions": 5
+  },
+  "model_directory": "ml/sentiment/finbert_model",
+  "tokenizer_directory": "ml/sentiment/finbert_model",
+  "dataset_name": "Financial PhraseBank",
+  "dataset_split_description": "Processed Financial PhraseBank train/validation/test splits; the test split remained untouched and was not used for model selection."
+}

@@ -1,0 +1,74 @@
+{
+  "total_test_examples": 226,
+  "total_errors": 5,
+  "error_rate": 0.022123893805309734,
+  "errors_by_actual_class": {
+    "negative": 1,
+    "neutral": 3,
+    "positive": 1
+  },
+  "errors_by_predicted_class": {
+    "negative": 1,
+    "neutral": 1,
+    "positive": 3
+  },
+  "confusion_pairs": {
+    "neutral->positive": 2,
+    "negative->positive": 1,
+    "neutral->negative": 1,
+    "positive->neutral": 1
+  },
+  "most_common_confusion_pair": "neutral->positive",
+  "low_confidence_error_count": 1,
+  "high_confidence_error_count": 4,
+  "representative_confusion_examples": [
+    {
+      "category": "negative_predicted_as_positive",
+      "text": "Finnish power supply solutions and systems provider Efore Oyj said its net loss widened to 3.2 mln euro $ 4.2 mln for the first quarter of fiscal 2006-2007 ending October 31 , 2007 from 900,000 euro $ 1.2 mln for the same period of fiscal 2005-06 .",
+      "actual": "negative",
+      "predicted": "positive",
+      "confidence": 0.9807170033454895,
+      "probabilities": {
+        "negative": 0.017681008204817772,
+        "neutral": 0.0016020148759707808,
+        "positive": 0.9807170033454895
+      }
+    },
+    {
+      "category": "neutral_predicted_as_negative",
+      "text": "The company reported a profit of 800,000 euro ($ 1.2 mln)on the sale of its Varesvuo Partners sub-group and a loss of 400,000 euro $ 623,000 caused by the sale of its program production subsidiary Oy Filmiteollisuus Fine Ab .",
+      "actual": "neutral",
+      "predicted": "negative",
+      "confidence": 0.9913066029548645,
+      "probabilities": {
+        "negative": 0.9913066029548645,
+        "neutral": 0.005287759471684694,
+        "positive": 0.0034056103322654963
+      }
+    },
+    {
+      "category": "neutral_predicted_as_positive",
+      "text": "`` These developments partly reflect the government 's higher activity in the field of dividend policy . ''",
+      "actual": "neutral",
+      "predicted": "positive",
+      "confidence": 0.9724294543266296,
+      "probabilities": {
+        "negative": 0.010100784711539745,
+        "neutral": 0.01746981590986252,
+        "positive": 0.9724294543266296
+      }
+    },
+    {
+      "category": "positive_predicted_as_neutral",
+      "text": "The company also said that in Poland a profitability program has been launched at the Oborniki steel frame and sandwich panel plant .",
+      "actual": "positive",
+      "predicted": "neutral",
+      "confidence": 0.8442063331604004,
+      "probabilities": {
+        "negative": 0.001231560716405511,
+        "neutral": 0.8442063331604004,
+        "positive": 0.1545621156692505
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "pretrained_model": "ProsusAI/finbert",
+  "seed": 42,
+  "max_sequence_length": 128,
+  "learning_rate": 2e-05,
+  "batch_size": 8,
+  "epochs": 3,
+  "weight_decay": 0.01,
+  "label_mapping": {
+    "positive": 0,
+    "negative": 1,
+    "neutral": 2
+  },
+  "training_sample_count": 1811,
+  "validation_sample_count": 227,
+  "training_configuration": {
+    "optimizer": "AdamW",
+    "loss_function": "CrossEntropyLoss",
+    "evaluation_metric": "macro_F1",
+    "device": "cpu"
+  },
+  "best_validation_metrics": {
+    "epoch": 1,
+    "macro_f1": 0.9830409356725146,
+    "accuracy": 0.986784140969163,
+    "macro_precision": 0.9773946360153257,
+    "macro_recall": 0.9806599832915622,
+    "per_class": {
+      "positive": {
+        "precision": 0.9655172413793104,
+        "recall": 0.9824561403508771,
+        "f1": 0.9739130434782609,
+        "support": 57
+      },
+      "negative": {
+        "precision": 0.9666666666666667,
+        "recall": 0.9666666666666667,
+        "f1": 0.9666666666666667,
+        "support": 30
+      },
+      "neutral": {
+        "precision": 1.0,
+        "recall": 0.9928571428571429,
+        "f1": 0.996415770609319,
+        "support": 140
+      }
+    },
+    "confusion_matrix": [
+      [
+        56,
+        1,
+        0
+      ],
+      [
+        1,
+        29,
+        0
+      ],
+      [
+        1,
+        0,
+        139
+      ]
+    ]
+  },
+  "actual_epochs_completed": 3,
+  "best_validation_epoch": 1
+}

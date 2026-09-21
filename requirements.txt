@@ -3,3 +3,16 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 python-dotenv
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+huggingface_hub
+transformers
+sentence-transformers
+torch
+ucimlrepo
+xgboost==3.0.5
+yfinance
+pypdf
