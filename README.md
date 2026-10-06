@@ -74,40 +74,39 @@ The RAG retrieval endpoint returns retrieved chunks directly. The RAG ask endpoi
 
 ### 1. Bankruptcy Risk Prediction
 
-The risk workflow uses an **XGBoost `XGBClassifier`** with 94 named financial input features. It returns a bankruptcy probability and maps that result to Low, Medium, or High risk. **SHAP TreeExplainer** supplies the five feature contributions with the largest absolute SHAP values for the prediction.
-
-No risk-model evaluation metrics are included here because the repository metadata does not provide a documented evaluation result.
+The risk workflow uses an **XGBoost `XGBClassifier`** with 94 named financial input features. It returns bankruptcy probability and a Low, Medium, or High category. **SHAP TreeExplainer** supplies the five feature contributions with the largest absolute values for each prediction.
 
 ### 2. Stock Return Prediction
 
-The stock workflow runs a **multivariate return-target LSTM** for **AAPL only**. It uses 13 engineered features over a 60-step input sequence, predicts a next-day return, and derives a projected next close from the latest close in the local engineered dataset. Inference requires local model, scaler, metadata, and processed-data artifacts.
-
-This output is a model prediction, not live pricing or a guarantee. The repository does not provide a committed numeric evaluation result supporting a claim that the model outperforms a persistence baseline.
+The served workflow uses a **multivariate return-target LSTM** for **AAPL only**. It uses 13 engineered features over a 60-step input sequence to predict next-day return and derive a projected close from the latest close in local engineered data. This is not live pricing. The repository also contains univariate direct-close and multivariate direct-close LSTM experiments.
 
 ### 3. Financial Sentiment Analysis
 
-The sentiment workflow uses a fine-tuned **`ProsusAI/finbert`** model trained using the **Financial PhraseBank** data. It returns positive, negative, or neutral sentiment with confidence and probabilities for all three classes.
-
-The following are the repository's recorded **held-out test-set results** (226 test examples), not production guarantees:
-
-| Metric | Test result |
-| --- | ---: |
-| Accuracy | 0.9779 |
-| Macro F1 | 0.9729 |
-| Weighted F1 | 0.9780 |
+The sentiment workflow uses a fine-tuned **`ProsusAI/finbert`** model trained on **Financial PhraseBank** data. It returns positive, negative, or neutral sentiment with confidence and probabilities for all three classes.
 
 ### 4. Financial Research / RAG
 
-The RAG corpus is Apple's **2024 Form 10-K** represented as 134 chunks. Retrieval uses **`sentence-transformers/all-MiniLM-L6-v2`** embeddings with 384 dimensions, a **FAISS** index, and cosine similarity. The answer-generation layer uses the Google Gemini SDK and the configured Gemini model. It instructs the model to answer only from retrieved context, treat retrieved text as source material rather than instructions, avoid unsupported facts, and cite source references when possible. Responses include references to the retrieved chunks.
+The RAG corpus contains 134 chunks from Apple's **2024 Form 10-K**. Retrieval uses **`sentence-transformers/all-MiniLM-L6-v2`** embeddings (384 dimensions) and a FAISS index. The answer-generation layer uses the configured Google Gemini model and grounds answers in retrieved context.
 
-The repository's evaluation covers **eight project questions**. The reported values are a small project evaluation, not a general retrieval benchmark or production guarantee:
+## Model Evaluation & Results
 
-| Metric | Project evaluation |
-| --- | ---: |
-| Recall@1 | 0.750 |
-| Recall@3 | 1.000 |
-| Recall@5 | 1.000 |
+The figures below are transcribed from repository evaluation artifacts; no metrics were recomputed for this README.
 
+| Workflow | Dataset and evaluation setup | Recorded results |
+| --- | --- | --- |
+| **Risk** | UCI Taiwanese Bankruptcy Prediction (repository ID 572); stratified 80/20 train/test split, `random_state=42`; XGBoost classifier with 94 retained features. Training handles class imbalance with `scale_pos_weight`. | No saved numeric evaluation summary is currently present. The training script calculates accuracy, precision, recall, F1, ROC-AUC, and a confusion matrix on the test split, but only prints them when run. |
+| **Stock** | AAPL Yahoo Finance daily data; served model is a 13-feature, 60-step LSTM targeting `Next_Day_Return`, using local engineered features. The repository also includes univariate and multivariate direct-close models. | No saved numeric MAE/RMSE/MAPE results or persistence-baseline comparison summary is currently present. |
+| **Sentiment** | Financial PhraseBank: 2,264 examples split 80/10/10 (1,811 train / 227 validation / 226 test); fine-tuned `ProsusAI/finbert`. | **Held-out test set (226 examples):** accuracy **0.9779**, macro F1 **0.9729**, weighted F1 **0.9780**. |
+| **RAG retrieval** | Apple 2024 Form 10-K; 134 chunks; `sentence-transformers/all-MiniLM-L6-v2` with 384-dimensional embeddings. FAISS `IndexFlatIP` uses L2-normalized vectors for cosine similarity. Evaluation set: 8 questions. | Recall@1 **0.750** · Recall@3 **1.000** · Recall@5 **1.000**. |
+
+The recorded sentiment training configuration is 3 epochs, maximum sequence length 128, learning rate `2e-5`, batch size 8, weight decay `0.01`, and seed `42`. The validation metrics recorded during training are separate from the held-out test results shown above and are not presented as test performance.
+
+### Evaluation limitations
+
+- Numeric risk and stock evaluation summaries are not currently persisted in the repository; no performance claim against a baseline is made.
+- RAG retrieval was evaluated on only eight project questions, so these results are a small project evaluation, not a broad benchmark.
+- Sentiment scores are held-out test-set results and should not be presented as production performance.
+- Stock prediction uses historical/local AAPL data rather than live-market inference.
 ## Frontend
 
 The React and TypeScript application contains five views:
@@ -338,9 +337,8 @@ npm run build
 
 ### Setup Caveats
 
-- `requirements.txt` currently does **not** declare TensorFlow, although the stock inference service imports TensorFlow/Keras, or SHAP, although the risk inference service imports SHAP. A clean environment may need those dependencies installed separately before those inference paths can run.
-- RAG retrieval imports FAISS, but no FAISS package is declared in `requirements.txt`; install the appropriate FAISS package separately before running retrieval in a clean environment.
-- `pytest` is not listed in `requirements.txt`; install it separately with `python -m pip install pytest`, then run `python -m pytest` from the repository root.
+- `requirements.txt` declares TensorFlow, SHAP, FAISS, and pytest.
+
 - Stock inference depends on local model, scaler, metadata, and processed-data artifacts. Any checkout or environment missing these local artifacts will not have the complete stock inference inputs.
 - Gemini answer generation requires `GEMINI_API_KEY`; retrieval does not require an LLM API key.
 
