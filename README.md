@@ -24,14 +24,48 @@ This is a local financial-analysis application. Stock inference is limited to AA
 ## System Architecture
 
 ```mermaid
-flowchart TD
-    U[User] --> FE[React + TypeScript frontend]
-    FE --> API[FastAPI backend]
-    API --> R[Risk: XGBoost + SHAP]
-    API --> S[Stock: multivariate return-target LSTM]
-    API --> SE[Sentiment: FinBERT]
-    API --> RET[Research: FAISS retrieval]
-    RET --> GEM[Gemini grounded answer generation]
+flowchart LR
+  subgraph RT["A. Runtime - solid arrows"]
+    direction TB
+    UIIN["Frontend"] --> API["FastAPI API /api/v1"]
+
+    API -->|"risk/predict"| RS["Risk Service"] --> XGB["XGBoost"]
+    XGB --> RPROB["Risk probability + level"] --> RRESULT["Risk result"]
+    XGB --> SHAP["SHAP top five"] --> RRESULT
+    RRESULT --> APIRESP["FastAPI response"]
+
+    API -->|"stock/predict"| SS["Stock Service"] --> LSTM["AAPL return LSTM"] --> STOCKOUT["Next-day return + close; local, not live"] --> APIRESP
+    API -->|"sentiment/predict"| SES["Sentiment Service"] --> FINBERT["Fine-tuned FinBERT"] --> SENTOUT["Label + probabilities"] --> APIRESP
+
+    API -->|"/rag/retrieve"| RRETR["Retrieve route"] --> EMBED["SentenceTransformer"] --> FAISS["FAISS search"] --> CHUNKS["Retrieved chunks + metadata"]
+    CHUNKS -->|"retrieve results; no Gemini"| RETRESP["Results + metadata"] --> APIRESP
+    API -->|"/rag/ask"| RASK["Ask route"] --> EMBED
+    CHUNKS -->|"context found"| ASKCTX["Retrieved context"] --> ANSWER["Grounded Answer Service"] --> GEMINI["Gemini API: answer only"] --> ASKRESP["Answer + sources"] --> APIRESP
+    CHUNKS -->|"no context"| EMPTY["Insufficient-context answer"] --> APIRESP
+
+    APIRESP --> UIOUT["Frontend"]
+  end
+
+  subgraph ART["B. Local Model/Data Artifacts"]
+    direction TB
+    RISKART["Risk model JSON + metadata"]
+    STOCKART["AAPL LSTM + scalers + engineered data"]
+    SENTART["FinBERT model + metadata"]
+    RAGART["FAISS index + embeddings + chunks + metadata"]
+  end
+
+  subgraph OFF["C. Offline Preparation - dashed artifact generation"]
+    direction TB
+    UCI["UCI Bankruptcy"] -.-> RPREP["Preprocess"] -.-> RTRAIN["XGBoost training"] -.-> RISKART
+    YF["Yahoo Finance AAPL"] -.-> SPREP["Feature engineering"] -.-> STRAIN["LSTM train/evaluate"] -.-> STOCKART
+    FPB["Financial PhraseBank"] -.-> PPREP["Preprocess + splits"] -.-> PTRAIN["FinBERT fine-tune/evaluate"] -.-> SENTART
+    SEC["Apple 2024 Form 10-K"] -.-> EXTRACT["Extract text"] -.-> CHUNK["Chunk"] -.-> EMBGEN["Embed all-MiniLM-L6-v2"] -.-> BUILD["Build FAISS index"] -.-> RAGART
+  end
+
+  RISKART --> XGB
+  STOCKART --> SS
+  SENTART --> FINBERT
+  RAGART --> FAISS
 ```
 
 The RAG retrieval endpoint returns retrieved chunks directly. The RAG ask endpoint retrieves context and passes it to the answer-generation provider; when there is no retrieved context, the answer service returns an insufficient-context response without calling the LLM.
@@ -99,6 +133,146 @@ All endpoints use the configured API prefix, which defaults to `/api/v1`.
 | `POST` | `/api/v1/rag/retrieve` | Retrieve matching chunks from the annual-report corpus. |
 | `POST` | `/api/v1/rag/ask` | Retrieve context and generate a grounded answer with source references. |
 
+## API Reference
+
+The API prefix is configurable and defaults to `/api/v1`. Request bodies are JSON. Invalid request models return FastAPI's standard `422` validation response. The response examples below are schema illustrations; dynamic outputs use pseudo-JSON type placeholders and are not literal, copy-pasteable API responses.
+
+### `GET /api/v1/health`
+
+Returns API process health. It does **not** verify that ML models or RAG artifacts are ready.
+
+- **Request:** No body.
+- **Response:** `status` and `service` strings.
+
+```json
+{"status":"ok","service":"FinSight AI API"}
+```
+
+### `POST /api/v1/risk/predict`
+
+Predicts bankruptcy probability and returns the top SHAP contributors.
+
+- **Request:** Required `features` object mapping every exact trained feature name to a numeric value. The required feature set is recorded in [`ml/risk_prediction/model_metadata.json`](ml/risk_prediction/model_metadata.json); the model uses 94 features. To avoid suggesting incomplete or fabricated inputs, no partial feature payload is shown.
+- **Validation:** Missing or extra feature names return **400**. Invalid body/value types return **422**.
+- **Response:** `bankruptcy_probability`, `risk_level`, and `top_contributors` entries (`feature`, `shap_value`).
+- **Other errors:** **500** if the risk model or metadata file is missing.
+
+**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
+
+```text
+{
+  "bankruptcy_probability": <number>,
+  "risk_level": <string>,
+  "top_contributors": [{"feature": <string>, "shap_value": <number>}]
+}
+```
+
+### `POST /api/v1/stock/predict`
+
+Predicts next-day return and projected close using the local AAPL model and engineered data. This is **not** a live-market lookup. Only `AAPL` is supported.
+
+- **Request:** Optional `ticker` string; defaults to `"AAPL"`.
+- **Validation:** Any other ticker returns **400**.
+- **Response:** `ticker`, `latest_close`, `predicted_next_day_return`, `predicted_next_close`, `model_type`, and `sequence_length`.
+- **Other errors:** **500** if model or artifact files are missing.
+
+**Request example:**
+
+```json
+{"ticker":"AAPL"}
+```
+
+**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
+
+```text
+{
+  "ticker": <string>,
+  "latest_close": <number>,
+  "predicted_next_day_return": <number>,
+  "predicted_next_close": <number>,
+  "model_type": <string>,
+  "sequence_length": <integer>
+}
+```
+
+### `POST /api/v1/sentiment/predict`
+
+Classifies a financial text snippet with the saved FinBERT model.
+
+- **Request:** Required `text` string.
+- **Validation:** Empty or whitespace-only text returns **400**; a missing or non-string value returns **422**.
+- **Response:** `sentiment`, `confidence`, and `probabilities` with `negative`, `neutral`, and `positive` values.
+- **Other errors:** **500** if the sentiment model or metadata is missing.
+
+**Request example:**
+
+```json
+{"text":"<financial text to classify>"}
+```
+
+**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
+
+```text
+{
+  "sentiment": <string>,
+  "confidence": <number>,
+  "probabilities": {"negative": <number>, "neutral": <number>, "positive": <number>}
+}
+```
+
+### `POST /api/v1/rag/retrieve`
+
+Searches the local FAISS index and returns matching annual-report chunks and metadata. This endpoint does **not** call Gemini.
+
+- **Request:** Required `query` string; optional `top_k` integer, default `5`.
+- **Validation:** `top_k` must be from `1` through `10` (inclusive). Empty query returns **422**; whitespace-only query returns **400**.
+- **Response:** Original `query` and `results`; each result contains `chunk_id`, `score`, `text`, and `metadata`.
+- **Other errors:** **500** if the retrieval index or document artifacts are unavailable.
+
+**Request example:**
+
+```json
+{"query":"<question to search>","top_k":5}
+```
+
+**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
+
+```text
+{
+  "query": <string>,
+  "results": [{"chunk_id": <string>, "score": <number>, "text": <string>, "metadata": <object>}]
+}
+```
+
+### `POST /api/v1/rag/ask`
+
+Retrieves report context first, then generates a grounded answer with the configured Gemini provider when context is available.
+
+- **Request:** Required `query` string; optional `top_k` integer, default `5`.
+- **Validation:** `query` must remain non-empty after trimming; `top_k` must be from `1` through `10` (inclusive). Invalid values return **422**.
+- **Response:** `query`, generated `answer`, and `sources` containing retrieved chunk IDs and metadata.
+- **Behavior:** If retrieval returns no chunks, the answer service returns its insufficient-context response without calling Gemini.
+- **Other errors:** **500** for retrieval failure, unavailable/unconfigured Gemini provider, or answer-generation failure.
+
+**Request example:**
+
+```json
+{"query":"<question about the report>","top_k":5}
+```
+
+**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
+
+```text
+{
+  "query": <string>,
+  "answer": <string>,
+  "sources": [{"chunk_id": <string>, "metadata": <object>}]
+}
+```
+
+### OpenAPI documentation
+
+FastAPI exposes interactive documentation at `/docs` and the OpenAPI schema at `/openapi.json`.
 ## Tech Stack
 
 - **Frontend:** React, TypeScript, Vite, React Router.
@@ -201,5 +375,10 @@ Possible future work, not currently implemented, includes broader ticker and dat
 ## License
 
 A project license has not yet been specified. Review applicable dataset, source-document, and model terms before redistribution or use.
+
+
+
+
+
 
 
