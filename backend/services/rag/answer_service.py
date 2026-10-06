@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from typing import Any, Sequence
+
+from backend.config import get_settings
 
 
 class BaseLLMProvider(ABC):
@@ -16,34 +17,34 @@ class BaseLLMProvider(ABC):
 class ConfiguredLLMProvider(BaseLLMProvider):
     """Concrete provider that uses an environment-configured LLM if available."""
 
-    def __init__(self, api_key: str | None = None, model: str | None = None, base_url: str | None = None) -> None:
-        self.api_key = api_key or os.getenv("FINSIGHT_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.model = model or os.getenv("FINSIGHT_LLM_MODEL") or "gpt-4o-mini"
-        self.base_url = base_url or os.getenv("FINSIGHT_LLM_BASE_URL")
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+        settings = get_settings()
+        self.api_key = api_key or settings.GEMINI_API_KEY
+        self.model = model or settings.FINSIGHT_LLM_MODEL
 
     def _require_sdk(self) -> None:
-        try:
-            import openai  # type: ignore
-        except ImportError as exc:  # pragma: no cover - dependency optional
-            raise RuntimeError(
-                "LLM provider support is not available because the OpenAI Python SDK is not installed."
-            ) from exc
-
         if not self.api_key:
             raise RuntimeError(
-                "LLM provider configuration is missing. Set FINSIGHT_LLM_API_KEY or OPENAI_API_KEY before generation."
+                "LLM provider configuration is missing. Set GEMINI_API_KEY before generation."
             )
 
-        self._openai = openai
+        try:
+            from google import genai  # type: ignore
+        except ImportError as exc:  # pragma: no cover - dependency optional
+            raise RuntimeError(
+                "LLM provider support is not available because the Google GenAI Python SDK is not installed."
+            ) from exc
+
+        self._genai = genai
 
     def generate(self, prompt: str) -> str:
         self._require_sdk()
-        client = self._openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
-        response = client.responses.create(
+        client = self._genai.Client(api_key=self.api_key)
+        response = client.models.generate_content(
             model=self.model,
-            input=prompt,
+            contents=prompt,
         )
-        return str(response.output_text)
+        return str(response.text or "")
 
 
 class AnswerGenerationService:

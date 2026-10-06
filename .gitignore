@@ -61,3 +61,4 @@ rag/retrieval/*.faiss
 # =========================
 .DS_Store
 Thumbs.db
+*.tsbuildinfo

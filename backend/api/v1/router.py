@@ -13,10 +13,38 @@ from backend.services.stock.stock_service import StockPredictionService
 
 router = APIRouter()
 router.include_router(rag_router)
-risk_service = RiskPredictionService()
-sentiment_service = SentimentPredictionService()
-stock_service = StockPredictionService()
-rag_service = RagRetrievalService()
+risk_service: RiskPredictionService | None = None
+sentiment_service: SentimentPredictionService | None = None
+stock_service: StockPredictionService | None = None
+rag_service: RagRetrievalService | None = None
+
+
+def _get_risk_service() -> RiskPredictionService:
+    global risk_service
+    if risk_service is None:
+        risk_service = RiskPredictionService()
+    return risk_service
+
+
+def _get_sentiment_service() -> SentimentPredictionService:
+    global sentiment_service
+    if sentiment_service is None:
+        sentiment_service = SentimentPredictionService()
+    return sentiment_service
+
+
+def _get_stock_service() -> StockPredictionService:
+    global stock_service
+    if stock_service is None:
+        stock_service = StockPredictionService()
+    return stock_service
+
+
+def _get_rag_service() -> RagRetrievalService:
+    global rag_service
+    if rag_service is None:
+        rag_service = RagRetrievalService()
+    return rag_service
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -28,7 +56,7 @@ def health_check() -> HealthResponse:
 def predict_bankruptcy_risk(request: RiskPredictionRequest) -> RiskPredictionResponse:
     """Predict bankruptcy risk and return the top SHAP-driven feature contributors for the inference."""
     try:
-        result = risk_service.predict(request.features)
+        result = _get_risk_service().predict(request.features)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -47,7 +75,7 @@ def predict_bankruptcy_risk(request: RiskPredictionRequest) -> RiskPredictionRes
 def predict_sentiment(request: SentimentPredictionRequest) -> SentimentPredictionResponse:
     """Predict the sentiment of a single financial text snippet using the calibrated FinBERT model."""
     try:
-        result = sentiment_service.predict(request.text)
+        result = _get_sentiment_service().predict(request.text)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -66,7 +94,7 @@ def predict_sentiment(request: SentimentPredictionRequest) -> SentimentPredictio
 def predict_stock_return(request: StockPredictionRequest) -> StockPredictionResponse:
     """Predict the next-day AAPL return and projected close using the trained return-target LSTM."""
     try:
-        result = stock_service.predict(request.ticker)
+        result = _get_stock_service().predict(request.ticker)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,5 +112,11 @@ def predict_stock_return(request: StockPredictionRequest) -> StockPredictionResp
 @router.post("/rag/retrieve", response_model=RagRetrieveResponse)
 def retrieve_from_corpus(request: RagRetrieveRequest) -> RagRetrieveResponse:
     """Run semantic search against the annual report corpus and return the top matching chunks."""
-    result = rag_service.retrieve(query=request.query, top_k=request.top_k)
+    try:
+        result = _get_rag_service().retrieve(query=request.query, top_k=request.top_k)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The retrieval index or document artifacts could not be loaded.",
+        ) from exc
     return RagRetrieveResponse(**result)

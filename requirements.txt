@@ -16,3 +16,4 @@ ucimlrepo
 xgboost==3.0.5
 yfinance
 pypdf
+google-genai
