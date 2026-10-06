@@ -328,7 +328,11 @@ npm ci
 npm run dev
 ```
 
-The frontend's configured development API base is `http://localhost:8000/api/v1`. For frontend checks and a production build, run from `frontend/`:
+Vite uses port `5173` by default and may select another port if `5173` is occupied. A frontend `frontend/.env` file is optional for the normal development setup. Without `VITE_API_BASE_URL`, the frontend uses the relative API base `/api/v1`, and Vite proxies `/api` requests to `http://127.0.0.1:8000`.
+
+If you explicitly set `VITE_API_BASE_URL=http://localhost:8000/api/v1` (as shown in `frontend/.env.example`), requests go directly to FastAPI and use CORS rather than the Vite proxy. The example file is not loaded automatically; create `frontend/.env` to use that override.
+
+For frontend checks and a production build, run from `frontend/`:
 
 ```powershell
 npm run typecheck
@@ -339,8 +343,10 @@ npm run build
 
 - `requirements.txt` declares TensorFlow, SHAP, FAISS, and pytest.
 
-- Stock inference depends on local model, scaler, metadata, and processed-data artifacts. Any checkout or environment missing these local artifacts will not have the complete stock inference inputs.
-- Gemini answer generation requires `GEMINI_API_KEY`; retrieval does not require an LLM API key.
+- The current development environment was validated with Python 3.10.11, Node.js 24.13.0, and npm 11.21.0. These are tested development versions, not declared minimum requirements; the repository does not specify mandatory Python or Node.js/npm versions.
+- The `.gitignore` excludes several generated or local ML/RAG artifacts, including stock `.keras` models and scaler artifacts, processed stock data, the FinBERT model directory, RAG embedding JSONL files, and the FAISS index. Git tracking of these artifacts has not been verified, so a fresh clone may require acquisition or regeneration of ignored model/data artifacts before all inference workflows can run.
+- `/api/v1/health` reports API process health; it does not verify that the ML models or RAG artifacts are present or ready.
+- `GEMINI_API_KEY` is required for grounded answer generation when retrieved context is available. `/api/v1/rag/retrieve` does not require Gemini; `/api/v1/rag/ask` uses Gemini when retrieval returns context.
 
 
 ## Environment Variables
@@ -354,8 +360,10 @@ Set backend variables in a local `.env` file based on `.env.example`. Do not com
 | `API_V1_PREFIX` | `/api/v1` | Prefix for versioned API routes. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000` | Comma-separated browser origins allowed by the backend. |
 | `GEMINI_API_KEY` | Empty in `.env.example` | Gemini credential used for answer generation. Supply it locally; do not publish it. |
-| `FINSIGHT_LLM_MODEL` | `gemini-2.5-flash-lite` | Gemini model used by the answer-generation provider. |
+| `FINSIGHT_LLM_MODEL` | `gemini-3.5-flash-lite` | Gemini model used by the answer-generation provider. |
 | `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Frontend API base URL, documented in `frontend/.env.example`. |
+
+For local Vite development, `frontend/.env` is optional: without the override, requests use `/api/v1` through the Vite proxy to `http://127.0.0.1:8000`. Setting `VITE_API_BASE_URL` to the example's absolute URL sends requests directly to FastAPI and relies on the backend's CORS configuration.
 
 ## Limitations
 
