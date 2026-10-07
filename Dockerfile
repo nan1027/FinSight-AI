@@ -1,3 +1,14 @@
+FROM node:22-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -20,7 +31,7 @@ RUN pip install --upgrade pip \
 COPY backend ./backend
 COPY rag ./rag
 COPY ml ./ml
-COPY frontend/dist ./frontend/dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 ENV PORT=8080
 
