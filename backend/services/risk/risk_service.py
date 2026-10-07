@@ -9,6 +9,7 @@ import pandas as pd
 import shap
 from xgboost import XGBClassifier
 
+from backend.services.artifact_resolver import resolve_workflow_artifacts
 
 MODEL_PATH = Path(__file__).resolve().parents[3] / "ml" / "risk_prediction" / "xgboost_risk_model.json"
 METADATA_PATH = Path(__file__).resolve().parents[3] / "ml" / "risk_prediction" / "model_metadata.json"
@@ -18,6 +19,11 @@ class RiskPredictionService:
     """Load the trained bankruptcy risk model and metadata for inference."""
 
     def __init__(self, model_path: Path | str = MODEL_PATH, metadata_path: Path | str = METADATA_PATH) -> None:
+        if Path(model_path).resolve() == MODEL_PATH.resolve() and Path(metadata_path).resolve() == METADATA_PATH.resolve():
+            artifacts = resolve_workflow_artifacts("risk")
+            model_path = artifacts["model"]
+            metadata_path = artifacts["metadata"]
+
         self.model_path = Path(model_path).resolve()
         self.metadata_path = Path(metadata_path).resolve()
         self.model = self._load_model(self.model_path)

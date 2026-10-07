@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
 
+from backend.services.artifact_resolver import resolve_workflow_artifacts
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MODEL_CANDIDATES = [
     PROJECT_ROOT / "ml" / "stock_prediction" / "return_lstm_stock_model.keras",
@@ -68,6 +70,21 @@ class StockPredictionService:
         engineered_data_path: Path | str = ENGINEERED_DATA_PATH,
         metadata_path: Path | str = METADATA_PATH,
     ) -> None:
+        default_paths = (
+            (model_path, MODEL_PATH),
+            (feature_scaler_path, FEATURE_SCALER_PATH),
+            (target_scaler_path, TARGET_SCALER_PATH),
+            (engineered_data_path, ENGINEERED_DATA_PATH),
+            (metadata_path, METADATA_PATH),
+        )
+        if all(Path(path).resolve() == Path(default).resolve() for path, default in default_paths):
+            artifacts = resolve_workflow_artifacts("stock")
+            model_path = artifacts["model"]
+            feature_scaler_path = artifacts["feature_scaler"]
+            target_scaler_path = artifacts["target_scaler"]
+            engineered_data_path = artifacts["engineered_data"]
+            metadata_path = artifacts["metadata"]
+
         self.model_path = self._resolve_artifact_path(model_path, MODEL_CANDIDATES)
         self.feature_scaler_path = self._resolve_artifact_path(feature_scaler_path, FEATURE_SCALER_CANDIDATES)
         self.target_scaler_path = self._resolve_artifact_path(target_scaler_path, TARGET_SCALER_CANDIDATES)

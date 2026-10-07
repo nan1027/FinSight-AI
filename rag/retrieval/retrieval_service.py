@@ -8,6 +8,8 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from backend.services.artifact_resolver import resolve_workflow_artifacts
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INDEX_PATH = REPO_ROOT / "rag" / "retrieval" / "AAPL_annual_report_2024.faiss"
 INDEX_METADATA_PATH = REPO_ROOT / "rag" / "retrieval" / "index_metadata.json"
@@ -25,6 +27,19 @@ class RetrievalService:
         embedding_path: Path | str = EMBEDDINGS_PATH,
         model_name: str | None = None,
     ) -> None:
+        default_paths = (
+            (index_path, INDEX_PATH),
+            (index_metadata_path, INDEX_METADATA_PATH),
+            (embedding_metadata_path, EMBEDDING_METADATA_PATH),
+            (embedding_path, EMBEDDINGS_PATH),
+        )
+        if all(Path(path).resolve() == Path(default).resolve() for path, default in default_paths):
+            artifacts = resolve_workflow_artifacts("rag")
+            index_path = artifacts["index"]
+            index_metadata_path = artifacts["index_metadata"]
+            embedding_metadata_path = artifacts["embedding_metadata"]
+            embedding_path = artifacts["embeddings"]
+
         self.index_path = Path(index_path)
         self.index_metadata_path = Path(index_metadata_path)
         self.embedding_metadata_path = Path(embedding_metadata_path)

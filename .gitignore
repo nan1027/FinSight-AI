@@ -62,3 +62,6 @@ rag/retrieval/*.faiss
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# Local deployment artifact bundle
+deployment_artifacts/

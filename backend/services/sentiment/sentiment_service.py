@@ -8,6 +8,8 @@ import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from backend.services.artifact_resolver import resolve_workflow_artifacts
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MODEL_PATH = PROJECT_ROOT / "ml" / "sentiment" / "finbert_model"
 METADATA_PATH = PROJECT_ROOT / "ml" / "sentiment" / "model_metadata.json"
@@ -26,6 +28,11 @@ class SentimentPredictionService:
     def __init__(self, model_path: Path | str = MODEL_PATH, metadata_path: Path | str = METADATA_PATH) -> None:
         if getattr(self, "_initialized", False):
             return
+
+        if Path(model_path).resolve() == MODEL_PATH.resolve() and Path(metadata_path).resolve() == METADATA_PATH.resolve():
+            artifacts = resolve_workflow_artifacts("sentiment")
+            model_path = artifacts["model_config"].parent
+            metadata_path = artifacts["metadata"]
 
         self.model_path = Path(model_path).resolve()
         self.metadata_path = Path(metadata_path).resolve()

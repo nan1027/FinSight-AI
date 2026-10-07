@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +17,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
     GEMINI_API_KEY: str | None = None
     FINSIGHT_LLM_MODEL: str = "gemini-3.5-flash-lite"
+    FINSIGHT_HF_REPO_ID: str = "Nandita10/finsight-ai-artifacts"
+    HF_TOKEN: str | None = None
+    FINSIGHT_ARTIFACT_DIR: str | None = None
+    FINSIGHT_HF_REVISION: str | None = None
 
 
 @lru_cache

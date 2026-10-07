@@ -35,7 +35,12 @@ def test_valid_request_with_mocked_answer_provider() -> None:
         "sources": [{"chunk_id": "chunk_0042", "metadata": {"page": 37, "section": "Financial Results"}}],
     }
 
-    with patch("backend.api.v1.rag.RetrievalService.retrieve", return_value={"query": "What was Apple's total net sales in 2024?", "results": retrieved_chunks}), \
+    retrieval_service = Mock()
+    retrieval_service.retrieve.return_value = {
+        "query": "What was Apple's total net sales in 2024?",
+        "results": retrieved_chunks,
+    }
+    with patch("backend.api.v1.rag.RetrievalService", return_value=retrieval_service), \
          patch("backend.api.v1.rag.AnswerGenerationService.generate", return_value=answer_payload) as generate_mock:
         response = client.post(
             "/api/v1/rag/ask",
@@ -48,6 +53,7 @@ def test_valid_request_with_mocked_answer_provider() -> None:
     assert payload["answer"] == "Grounded answer from the retrieved context."
     assert len(payload["sources"]) == 1
     assert payload["sources"][0]["chunk_id"] == "chunk_0042"
+    retrieval_service.retrieve.assert_called_once_with(query="What was Apple's total net sales in 2024?", top_k=5)
     assert generate_mock.call_args[0][0] == "What was Apple's total net sales in 2024?"
     assert generate_mock.call_args[0][1] == retrieved_chunks
 
@@ -83,7 +89,9 @@ def test_invalid_query_and_top_k_rejected() -> None:
 
 
 def test_retrieval_failure_returns_500() -> None:
-    with patch("backend.api.v1.rag.RetrievalService.retrieve", side_effect=RuntimeError("retrieval bug")):
+    retrieval_service = Mock()
+    retrieval_service.retrieve.side_effect = RuntimeError("retrieval bug")
+    with patch("backend.api.v1.rag.RetrievalService", return_value=retrieval_service):
         response = client.post("/api/v1/rag/ask", json={"query": "What happened?", "top_k": 3})
 
     assert response.status_code == 500, response.text
@@ -91,7 +99,9 @@ def test_retrieval_failure_returns_500() -> None:
 
 
 def test_answer_generation_failure_returns_500() -> None:
-    with patch("backend.api.v1.rag.RetrievalService.retrieve", return_value={"query": "What happened?", "results": [{"chunk_id": "chunk_001", "text": "Example context.", "metadata": {"page": 1}, "score": 0.9}]}), \
+    retrieval_service = Mock()
+    retrieval_service.retrieve.return_value = {"query": "What happened?", "results": [{"chunk_id": "chunk_001", "text": "Example context.", "metadata": {"page": 1}, "score": 0.9}]}
+    with patch("backend.api.v1.rag.RetrievalService", return_value=retrieval_service), \
          patch("backend.api.v1.rag.AnswerGenerationService.generate", side_effect=RuntimeError("provider unavailable")):
         response = client.post("/api/v1/rag/ask", json={"query": "What happened?", "top_k": 3})
 
@@ -100,7 +110,9 @@ def test_answer_generation_failure_returns_500() -> None:
 
 
 def test_no_context_returns_insufficient_context() -> None:
-    with patch("backend.api.v1.rag.RetrievalService.retrieve", return_value={"query": "What happened?", "results": []}):
+    retrieval_service = Mock()
+    retrieval_service.retrieve.return_value = {"query": "What happened?", "results": []}
+    with patch("backend.api.v1.rag.RetrievalService", return_value=retrieval_service):
         response = client.post("/api/v1/rag/ask", json={"query": "What happened?", "top_k": 3})
 
     assert response.status_code == 200, response.text
@@ -113,16 +125,22 @@ def test_existing_apis_still_register() -> None:
     health = client.get("/api/v1/health")
     assert health.status_code == 200, health.text
 
-    risk = client.post("/api/v1/risk/predict", json={"features": {"company_age": 10.0, "debt_ratio": 0.1}})
+    with patch("backend.api.v1.router._get_risk_service", side_effect=FileNotFoundError):
+        risk = client.post("/api/v1/risk/predict", json={"features": {"company_age": 10.0, "debt_ratio": 0.1}})
     assert risk.status_code in {400, 500, 422}, risk.text
 
-    stock = client.post("/api/v1/stock/predict", json={"ticker": "AAPL"})
+    with patch("backend.api.v1.router._get_stock_service", side_effect=FileNotFoundError):
+        stock = client.post("/api/v1/stock/predict", json={"ticker": "AAPL"})
     assert stock.status_code in {200, 400, 500}, stock.text
 
-    sentiment = client.post("/api/v1/sentiment/predict", json={"text": "Apple reported strong growth."})
+    with patch("backend.api.v1.router._get_sentiment_service", side_effect=FileNotFoundError):
+        sentiment = client.post("/api/v1/sentiment/predict", json={"text": "Apple reported strong growth."})
     assert sentiment.status_code in {200, 400, 500}, sentiment.text
 
-    retrieve = client.post("/api/v1/rag/retrieve", json={"query": "Apple revenue", "top_k": 2})
+    rag_service = Mock()
+    rag_service.retrieve.return_value = {"query": "Apple revenue", "results": []}
+    with patch("backend.api.v1.router._get_rag_service", return_value=rag_service):
+        retrieve = client.post("/api/v1/rag/retrieve", json={"query": "Apple revenue", "top_k": 2})
     assert retrieve.status_code == 200, retrieve.text
 
 
