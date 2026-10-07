@@ -1,4 +1,4 @@
-# API/runtime
+﻿# API/runtime
 fastapi==0.136.3
 uvicorn[standard]==0.49.0
 pydantic==2.13.4
@@ -6,11 +6,12 @@ pydantic-settings==2.14.1
 python-dotenv==1.2.2
 
 # ML/NLP/RAG runtime
-numpy==2.2.6
+numpy==1.26.4
 pandas==2.3.3
 xgboost==3.0.5
 shap
 tensorflow
+ml-dtypes==0.5.3
 torch==2.12.0
 transformers==5.12.0
 sentence-transformers==5.5.1
@@ -22,6 +23,7 @@ scikit-learn==1.7.2
 matplotlib==3.10.9
 huggingface_hub==1.19.0
 datasets
+fsspec==2026.6.0
 ucimlrepo
 yfinance
 pypdf==6.13.2
