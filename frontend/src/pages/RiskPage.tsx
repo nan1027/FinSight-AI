@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { ShieldCheck, Sparkles } from 'lucide-react'
-import metadata from '../../../ml/risk_prediction/model_metadata.json'
+import metadata from '../riskModelMetadata.json'
 import { api, type RiskResult } from '../api'
 import { Alert, PageIntro, Panel, SubmitButton } from '../components/Interface'
 
