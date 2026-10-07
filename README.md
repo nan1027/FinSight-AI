@@ -1,390 +1,919 @@
-# FinSight AI
+# 📈 FinSight AI
 
-FinSight AI is a local financial analysis application that brings together bankruptcy-risk inference, AAPL next-day return prediction, financial-text sentiment classification, and grounded question answering over an Apple 2024 annual report. A React and TypeScript frontend communicates with a FastAPI backend that loads the project's local model and retrieval artifacts. FinSight AI is an educational/research project, not investment advice.
+### AI-Powered Financial Risk & Investment Copilot
+
+FinSight AI is an end-to-end financial intelligence platform that
+combines **machine learning, deep learning, financial NLP, explainable
+AI, Retrieval-Augmented Generation (RAG), and Gemini-powered reasoning**
+into one modern full-stack application.
+
+It provides four core workflows:
+
+-   🏦 **Bankruptcy Risk Analysis** using XGBoost + SHAP
+-   📈 **AAPL Next-Day Return Prediction** using a multivariate LSTM
+-   💹 **Financial Sentiment Analysis** using fine-tuned FinBERT
+-   📚 **Financial Research & Q&A** using FAISS + Sentence
+    Transformers + Gemini
+
+> **Disclaimer:** FinSight AI is an educational/research project. Its
+> outputs are not financial advice and should not be used as the sole
+> basis for investment, lending, or business decisions.
+
+------------------------------------------------------------------------
+
+## 🌐 Live Demo
+
+### **FinSight AI --- Live Frontend**
+
+👉 **https://fin-sight-ai-flax-gamma.vercel.app/**
+
+The deployed interface provides the complete FinSight AI workspace and
+all four product workflows.
+
+### 🔗 Project Links
+
+  --------------------------------------------------------------------------------------------
+  Resource                            Link
+  ----------------------------------- --------------------------------------------------------
+  🌐 Live Demo                        https://fin-sight-ai-flax-gamma.vercel.app/
+
+  💻 GitHub                           https://github.com/nan1027/FinSight-AI
+
+  🤗 ML Artifacts                     https://huggingface.co/Nandita10/finsight-ai-artifacts
+  --------------------------------------------------------------------------------------------
+
+The backend is implemented as a modular **FastAPI + ML/RAG service**,
+containerized with Docker and designed to run independently from the
+frontend.
+
+------------------------------------------------------------------------
+
+## ✨ Product Overview
+
+FinSight AI brings several financial intelligence capabilities into a
+single workspace.
+
+### 1. 🏦 Risk Intelligence
+
+Estimate bankruptcy probability from **94 financial indicators** and
+understand which features influenced the prediction through SHAP
+explanations.
+
+### 2. 📈 Market Prediction
+
+Use a trained **multivariate return-target LSTM** to estimate the
+next-day return and projected close for **AAPL**.
+
+### 3. 💹 Financial Sentiment
+
+Analyze financial statements, earnings excerpts, headlines, and other
+financial text using a fine-tuned **FinBERT** classifier.
+
+### 4. 📚 AI Financial Research
+
+Search Apple's 2024 annual report and ask grounded questions. The RAG
+pipeline retrieves relevant passages and uses Gemini to generate answers
+with source references.
+
+------------------------------------------------------------------------
+
+# 🖥️ Interface Preview
 
 ## Overview
 
-FinSight AI currently provides four implemented workflows:
+![FinSight AI Overview](docs/screenshots/overview.png)
 
-- **Bankruptcy Risk Analysis** — estimates bankruptcy probability from 94 financial features and returns a risk category with SHAP contributors.
-- **Stock Return Prediction** — predicts a next-day return and projected closing price for **AAPL only**.
-- **Financial Sentiment Analysis** — classifies a financial text snippet as positive, negative, or neutral.
-- **Financial Research / RAG** — retrieves relevant passages from an indexed Apple Inc. 2024 Form 10-K and can use Gemini to generate an answer grounded in those passages.
+## Risk Intelligence
 
-This is a local financial-analysis application. Stock inference is limited to AAPL and uses local data; the research corpus is limited to the Apple 2024 annual report. It is not a live or general market-data platform, a general-purpose financial research platform, or investment advice.
+![FinSight AI Risk Intelligence](docs/screenshots/risk.png)
 
-## Key Features
+## Market Prediction
 
-- Bankruptcy probability, Low/Medium/High category, and five leading SHAP contributors.
-- AAPL next-day return and projected close from a multivariate return-target LSTM.
-- Financial sentence sentiment with confidence and per-class probabilities.
-- Semantic search and Gemini answer generation over the local annual-report corpus, with source references.
-- React/TypeScript views integrated with versioned FastAPI endpoints.
+![FinSight AI Market Prediction](docs/screenshots/market.png)
 
-## System Architecture
+## Financial Sentiment
 
-```mermaid
-flowchart LR
-  subgraph RT["A. Runtime - solid arrows"]
-    direction TB
-    UIIN["Frontend"] --> API["FastAPI API /api/v1"]
+![FinSight AI Financial Sentiment](docs/screenshots/sentiment.png)
 
-    API -->|"risk/predict"| RS["Risk Service"] --> XGB["XGBoost"]
-    XGB --> RPROB["Risk probability + level"] --> RRESULT["Risk result"]
-    XGB --> SHAP["SHAP top five"] --> RRESULT
-    RRESULT --> APIRESP["FastAPI response"]
+## AI Financial Research
 
-    API -->|"stock/predict"| SS["Stock Service"] --> LSTM["AAPL return LSTM"] --> STOCKOUT["Next-day return + close; local, not live"] --> APIRESP
-    API -->|"sentiment/predict"| SES["Sentiment Service"] --> FINBERT["Fine-tuned FinBERT"] --> SENTOUT["Label + probabilities"] --> APIRESP
+![FinSight AI Research](docs/screenshots/research.png)
 
-    API -->|"/rag/retrieve"| RRETR["Retrieve route"] --> EMBED["SentenceTransformer"] --> FAISS["FAISS search"] --> CHUNKS["Retrieved chunks + metadata"]
-    CHUNKS -->|"retrieve results; no Gemini"| RETRESP["Results + metadata"] --> APIRESP
-    API -->|"/rag/ask"| RASK["Ask route"] --> EMBED
-    CHUNKS -->|"context found"| ASKCTX["Retrieved context"] --> ANSWER["Grounded Answer Service"] --> GEMINI["Gemini API: answer only"] --> ASKRESP["Answer + sources"] --> APIRESP
-    CHUNKS -->|"no context"| EMPTY["Insufficient-context answer"] --> APIRESP
+------------------------------------------------------------------------
 
-    APIRESP --> UIOUT["Frontend"]
-  end
+# 🧠 System Architecture
 
-  subgraph ART["B. Local Model/Data Artifacts"]
-    direction TB
-    RISKART["Risk model JSON + metadata"]
-    STOCKART["AAPL LSTM + scalers + engineered data"]
-    SENTART["FinBERT model + metadata"]
-    RAGART["FAISS index + embeddings + chunks + metadata"]
-  end
-
-  subgraph OFF["C. Offline Preparation - dashed artifact generation"]
-    direction TB
-    UCI["UCI Bankruptcy"] -.-> RPREP["Preprocess"] -.-> RTRAIN["XGBoost training"] -.-> RISKART
-    YF["Yahoo Finance AAPL"] -.-> SPREP["Feature engineering"] -.-> STRAIN["LSTM train/evaluate"] -.-> STOCKART
-    FPB["Financial PhraseBank"] -.-> PPREP["Preprocess + splits"] -.-> PTRAIN["FinBERT fine-tune/evaluate"] -.-> SENTART
-    SEC["Apple 2024 Form 10-K"] -.-> EXTRACT["Extract text"] -.-> CHUNK["Chunk"] -.-> EMBGEN["Embed all-MiniLM-L6-v2"] -.-> BUILD["Build FAISS index"] -.-> RAGART
-  end
-
-  RISKART --> XGB
-  STOCKART --> SS
-  SENTART --> FINBERT
-  RAGART --> FAISS
+``` text
+                              ┌────────────────────────┐
+                              │       User / UI        │
+                              │   React + TypeScript   │
+                              └────────────┬───────────┘
+                                           │
+                                           ▼
+                              ┌────────────────────────┐
+                              │     FastAPI Backend    │
+                              │       /api/v1          │
+                              └────────────┬───────────┘
+                                           │
+             ┌─────────────────────────────┼─────────────────────────────┐
+             │                             │                             │
+             ▼                             ▼                             ▼
+     ┌───────────────┐             ┌───────────────┐             ┌───────────────┐
+     │ Risk Service  │             │ Stock Service │             │  Sentiment    │
+     │   XGBoost     │             │     LSTM      │             │   FinBERT     │
+     └───────┬───────┘             └───────┬───────┘             └───────┬───────┘
+             │                             │                             │
+             ▼                             ▼                             ▼
+       Risk + SHAP                 Return + Price                Sentiment + Prob.
+             │                             │                             │
+             └─────────────────────────────┼─────────────────────────────┘
+                                           │
+                                           ▼
+                              ┌────────────────────────┐
+                              │      RAG Pipeline       │
+                              │ Sentence Transformers  │
+                              │         + FAISS        │
+                              └────────────┬───────────┘
+                                           │
+                                           ▼
+                              ┌────────────────────────┐
+                              │      Gemini LLM        │
+                              │ Grounded Answer Layer  │
+                              └────────────────────────┘
 ```
 
-The RAG retrieval endpoint returns retrieved chunks directly. The RAG ask endpoint retrieves context and passes it to the answer-generation provider; when there is no retrieved context, the answer service returns an insufficient-context response without calling the LLM.
+### Offline model/data preparation
 
-## ML & RAG Components
+``` text
+UCI Bankruptcy Dataset
+        ↓
+Preprocessing
+        ↓
+XGBoost Training + SHAP
+        ↓
+Risk Model Artifact
 
-### 1. Bankruptcy Risk Prediction
 
-The risk workflow uses an **XGBoost `XGBClassifier`** with 94 named financial input features. It returns bankruptcy probability and a Low, Medium, or High category. **SHAP TreeExplainer** supplies the five feature contributions with the largest absolute values for each prediction.
+Yahoo Finance AAPL Data
+        ↓
+Feature Engineering
+        ↓
+LSTM Training + Evaluation
+        ↓
+Stock Model Artifacts
 
-### 2. Stock Return Prediction
 
-The served workflow uses a **multivariate return-target LSTM** for **AAPL only**. It uses 13 engineered features over a 60-step input sequence to predict next-day return and derive a projected close from the latest close in local engineered data. This is not live pricing. The repository also contains univariate direct-close and multivariate direct-close LSTM experiments.
+Financial PhraseBank
+        ↓
+Preprocessing + Stratified Splits
+        ↓
+FinBERT Fine-Tuning
+        ↓
+Sentiment Model Artifact
 
-### 3. Financial Sentiment Analysis
 
-The sentiment workflow uses a fine-tuned **`ProsusAI/finbert`** model trained on **Financial PhraseBank** data. It returns positive, negative, or neutral sentiment with confidence and probabilities for all three classes.
-
-### 4. Financial Research / RAG
-
-The RAG corpus contains 134 chunks from Apple's **2024 Form 10-K**. Retrieval uses **`sentence-transformers/all-MiniLM-L6-v2`** embeddings (384 dimensions) and a FAISS index. The answer-generation layer uses the configured Google Gemini model and grounds answers in retrieved context.
-
-## Model Evaluation & Results
-
-The figures below are transcribed from repository evaluation artifacts; no metrics were recomputed for this README.
-
-| Workflow | Dataset and evaluation setup | Recorded results |
-| --- | --- | --- |
-| **Risk** | UCI Taiwanese Bankruptcy Prediction (repository ID 572); stratified 80/20 train/test split, `random_state=42`; XGBoost classifier with 94 retained features. Training handles class imbalance with `scale_pos_weight`. | No saved numeric evaluation summary is currently present. The training script calculates accuracy, precision, recall, F1, ROC-AUC, and a confusion matrix on the test split, but only prints them when run. |
-| **Stock** | AAPL Yahoo Finance daily data; served model is a 13-feature, 60-step LSTM targeting `Next_Day_Return`, using local engineered features. The repository also includes univariate and multivariate direct-close models. | No saved numeric MAE/RMSE/MAPE results or persistence-baseline comparison summary is currently present. |
-| **Sentiment** | Financial PhraseBank: 2,264 examples split 80/10/10 (1,811 train / 227 validation / 226 test); fine-tuned `ProsusAI/finbert`. | **Held-out test set (226 examples):** accuracy **0.9779**, macro F1 **0.9729**, weighted F1 **0.9780**. |
-| **RAG retrieval** | Apple 2024 Form 10-K; 134 chunks; `sentence-transformers/all-MiniLM-L6-v2` with 384-dimensional embeddings. FAISS `IndexFlatIP` uses L2-normalized vectors for cosine similarity. Evaluation set: 8 questions. | Recall@1 **0.750** · Recall@3 **1.000** · Recall@5 **1.000**. |
-
-The recorded sentiment training configuration is 3 epochs, maximum sequence length 128, learning rate `2e-5`, batch size 8, weight decay `0.01`, and seed `42`. The validation metrics recorded during training are separate from the held-out test results shown above and are not presented as test performance.
-
-### Evaluation limitations
-
-- Numeric risk and stock evaluation summaries are not currently persisted in the repository; no performance claim against a baseline is made.
-- RAG retrieval was evaluated on only eight project questions, so these results are a small project evaluation, not a broad benchmark.
-- Sentiment scores are held-out test-set results and should not be presented as production performance.
-- Stock prediction uses historical/local AAPL data rather than live-market inference.
-## Frontend
-
-The React and TypeScript application contains five views:
-
-- **Overview** — service status and entry points to the analysis workflows.
-- **Risk** — feature input and risk prediction results.
-- **Stock** — AAPL next-day model output.
-- **Sentiment** — financial text input and classification results.
-- **Research** — document retrieval and grounded question answering with source references.
-
-The frontend includes responsive styling and calls the existing backend API. During development, Vite proxies `/api` requests to the local FastAPI server.
-
-## API Endpoints
-
-All endpoints use the configured API prefix, which defaults to `/api/v1`.
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/v1/health` | Return API health status. |
-| `POST` | `/api/v1/risk/predict` | Predict bankruptcy probability and return risk category and SHAP contributors. |
-| `POST` | `/api/v1/stock/predict` | Predict the next-day AAPL return and projected close. |
-| `POST` | `/api/v1/sentiment/predict` | Classify a financial text snippet and return class probabilities. |
-| `POST` | `/api/v1/rag/retrieve` | Retrieve matching chunks from the annual-report corpus. |
-| `POST` | `/api/v1/rag/ask` | Retrieve context and generate a grounded answer with source references. |
-
-## API Reference
-
-The API prefix is configurable and defaults to `/api/v1`. Request bodies are JSON. Invalid request models return FastAPI's standard `422` validation response. The response examples below are schema illustrations; dynamic outputs use pseudo-JSON type placeholders and are not literal, copy-pasteable API responses.
-
-### `GET /api/v1/health`
-
-Returns API process health. It does **not** verify that ML models or RAG artifacts are ready.
-
-- **Request:** No body.
-- **Response:** `status` and `service` strings.
-
-```json
-{"status":"ok","service":"FinSight AI API"}
+Apple 2024 Form 10-K
+        ↓
+PDF Extraction
+        ↓
+Structure-Aware Chunking
+        ↓
+MiniLM Embeddings
+        ↓
+FAISS Index
+        ↓
+RAG Artifacts
 ```
 
-### `POST /api/v1/risk/predict`
+------------------------------------------------------------------------
 
-Predicts bankruptcy probability and returns the top SHAP contributors.
-
-- **Request:** Required `features` object mapping every exact trained feature name to a numeric value. The required feature set is recorded in [`ml/risk_prediction/model_metadata.json`](ml/risk_prediction/model_metadata.json); the model uses 94 features. To avoid suggesting incomplete or fabricated inputs, no partial feature payload is shown.
-- **Validation:** Missing or extra feature names return **400**. Invalid body/value types return **422**.
-- **Response:** `bankruptcy_probability`, `risk_level`, and `top_contributors` entries (`feature`, `shap_value`).
-- **Other errors:** **500** if the risk model or metadata file is missing.
-
-**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
-
-```text
-{
-  "bankruptcy_probability": <number>,
-  "risk_level": <string>,
-  "top_contributors": [{"feature": <string>, "shap_value": <number>}]
-}
-```
-
-### `POST /api/v1/stock/predict`
-
-Predicts next-day return and projected close using the local AAPL model and engineered data. This is **not** a live-market lookup. Only `AAPL` is supported.
-
-- **Request:** Optional `ticker` string; defaults to `"AAPL"`.
-- **Validation:** Any other ticker returns **400**.
-- **Response:** `ticker`, `latest_close`, `predicted_next_day_return`, `predicted_next_close`, `model_type`, and `sequence_length`.
-- **Other errors:** **500** if model or artifact files are missing.
-
-**Request example:**
-
-```json
-{"ticker":"AAPL"}
-```
-
-**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
-
-```text
-{
-  "ticker": <string>,
-  "latest_close": <number>,
-  "predicted_next_day_return": <number>,
-  "predicted_next_close": <number>,
-  "model_type": <string>,
-  "sequence_length": <integer>
-}
-```
-
-### `POST /api/v1/sentiment/predict`
-
-Classifies a financial text snippet with the saved FinBERT model.
-
-- **Request:** Required `text` string.
-- **Validation:** Empty or whitespace-only text returns **400**; a missing or non-string value returns **422**.
-- **Response:** `sentiment`, `confidence`, and `probabilities` with `negative`, `neutral`, and `positive` values.
-- **Other errors:** **500** if the sentiment model or metadata is missing.
-
-**Request example:**
-
-```json
-{"text":"<financial text to classify>"}
-```
-
-**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
-
-```text
-{
-  "sentiment": <string>,
-  "confidence": <number>,
-  "probabilities": {"negative": <number>, "neutral": <number>, "positive": <number>}
-}
-```
-
-### `POST /api/v1/rag/retrieve`
-
-Searches the local FAISS index and returns matching annual-report chunks and metadata. This endpoint does **not** call Gemini.
-
-- **Request:** Required `query` string; optional `top_k` integer, default `5`.
-- **Validation:** `top_k` must be from `1` through `10` (inclusive). Empty query returns **422**; whitespace-only query returns **400**.
-- **Response:** Original `query` and `results`; each result contains `chunk_id`, `score`, `text`, and `metadata`.
-- **Other errors:** **500** if the retrieval index or document artifacts are unavailable.
-
-**Request example:**
-
-```json
-{"query":"<question to search>","top_k":5}
-```
-
-**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
-
-```text
-{
-  "query": <string>,
-  "results": [{"chunk_id": <string>, "score": <number>, "text": <string>, "metadata": <object>}]
-}
-```
-
-### `POST /api/v1/rag/ask`
-
-Retrieves report context first, then generates a grounded answer with the configured Gemini provider when context is available.
-
-- **Request:** Required `query` string; optional `top_k` integer, default `5`.
-- **Validation:** `query` must remain non-empty after trimming; `top_k` must be from `1` through `10` (inclusive). Invalid values return **422**.
-- **Response:** `query`, generated `answer`, and `sources` containing retrieved chunk IDs and metadata.
-- **Behavior:** If retrieval returns no chunks, the answer service returns its insufficient-context response without calling Gemini.
-- **Other errors:** **500** for retrieval failure, unavailable/unconfigured Gemini provider, or answer-generation failure.
-
-**Request example:**
-
-```json
-{"query":"<question about the report>","top_k":5}
-```
-
-**Response schema illustration (pseudo-JSON; placeholders are types, not values):**
-
-```text
-{
-  "query": <string>,
-  "answer": <string>,
-  "sources": [{"chunk_id": <string>, "metadata": <object>}]
-}
-```
-
-### OpenAPI documentation
-
-FastAPI exposes interactive documentation at `/docs` and the OpenAPI schema at `/openapi.json`.
-## Tech Stack
-
-- **Frontend:** React, TypeScript, Vite, React Router.
-- **Backend:** Python, FastAPI, Pydantic Settings, Uvicorn.
-- **Machine learning:** XGBoost, SHAP, TensorFlow/Keras, scikit-learn.
-- **NLP:** PyTorch, Hugging Face Transformers, FinBERT.
-- **RAG:** Sentence Transformers, FAISS, PDF/text ingestion and chunking utilities.
-- **LLM:** Google Gemini through the `google-genai` Python SDK.
-
-## Project Structure
-
-```text
-.
-├── backend/                 FastAPI app, API routes, schemas, service adapters
-├── data/                    Local raw and processed data/artifacts
-├── frontend/                React + TypeScript + Vite application
-├── ml/
-│   ├── risk_prediction/     XGBoost model metadata, training and evaluation code
-│   ├── sentiment/           FinBERT workflow, metadata, evaluation and documentation
-│   └── stock_prediction/    LSTM workflows, feature engineering and evaluation
-├── notebooks/               Analysis notebooks
-├── rag/
-│   ├── documents/           Annual-report chunks and document metadata
-│   ├── embeddings/          Embedding generation and metadata
-│   ├── ingestion/           Document extraction, chunking and validation
-│   └── retrieval/           FAISS index, retrieval code and evaluation
-├── tests/                   Project-level tests
-├── .env.example             Backend environment-variable template
-└── requirements.txt         Python dependency declarations
-```
-
-## Local Development
-
-The commands below show the repository's Windows development workflow. Replace the example repository path with the location where you cloned the project.
-
-### Backend
-
-```powershell
-cd C:\path\to\FinSight-AI
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
-python -m uvicorn main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
-```
+# 🛠️ Technology Stack
 
 ### Frontend
 
-In a separate terminal:
+-   React
+-   TypeScript
+-   Vite
+-   React Router
+-   Lucide React
+-   Custom responsive CSS
+-   Glassmorphism / dark AI-product UI
+-   Vercel
 
-```powershell
-cd C:\path\to\FinSight-AI\frontend
+### Backend
+
+-   Python 3.10
+-   FastAPI
+-   Pydantic
+-   Pydantic Settings
+-   Uvicorn
+-   REST APIs
+-   CORS
+
+### Machine Learning
+
+-   Scikit-learn
+-   XGBoost
+-   SHAP
+-   TensorFlow / Keras
+-   PyTorch
+-   NumPy
+-   Pandas
+
+### NLP
+
+-   Hugging Face Transformers
+-   FinBERT
+-   Financial PhraseBank
+-   PyTorch
+
+### RAG
+
+-   Sentence Transformers
+-   `all-MiniLM-L6-v2`
+-   FAISS
+-   PyPDF
+-   Google Gemini
+-   `google-genai`
+
+### Data Sources
+
+-   UCI Taiwanese Bankruptcy Prediction Dataset
+-   Yahoo Finance
+-   Financial PhraseBank
+-   Apple 2024 Form 10-K
+
+### Deployment & Infrastructure
+
+-   Vercel --- frontend
+-   Docker --- backend containerization
+-   Hugging Face --- ML artifact storage
+-   FastAPI --- backend service architecture
+
+------------------------------------------------------------------------
+
+# 🏦 Module 1 --- Bankruptcy Risk Prediction
+
+## Dataset
+
+**Taiwanese Bankruptcy Prediction Dataset**
+
+-   UCI Dataset ID: 572
+-   6,819 companies
+-   95 original financial features
+-   Binary target: `Bankrupt?`
+-   6,599 non-bankrupt
+-   220 bankrupt
+-   No missing values
+
+A constant feature was removed during preprocessing, leaving **94 model
+features**.
+
+### Split
+
+``` text
+Train: 5,455
+Test:  1,364
+```
+
+A stratified 80/20 split was used with `random_state=42`.
+
+## Model
+
+**XGBoost `XGBClassifier`**
+
+``` text
+n_estimators = 300
+max_depth = 4
+learning_rate = 0.05
+subsample = 0.8
+colsample_bytree = 0.8
+scale_pos_weight = class imbalance ratio
+```
+
+### Held-Out Test Results
+
+  Metric         Score
+  ----------- --------
+  Accuracy      96.26%
+  Precision     44.26%
+  Recall        61.36%
+  F1 Score      51.43%
+  ROC-AUC       95.81%
+
+### Confusion Matrix
+
+``` text
+                 Predicted
+              Non-Bankrupt  Bankrupt
+
+Actual
+Non-Bankrupt      1286         34
+Bankrupt           17         27
+```
+
+## Explainability
+
+**SHAP TreeExplainer** is used to identify the most influential features
+for each prediction.
+
+Top global contributors observed during evaluation included:
+
+1.  Total Debt / Total Net Worth
+2.  Borrowing Dependency
+3.  Quick Ratio
+4.  Retained Earnings / Total Assets
+5.  Interest-Bearing Debt Interest Rate
+6.  Continuous Interest Rate After Tax
+7.  Persistent EPS in Last Four Seasons
+8.  ROA Before Interest / Depreciation
+9.  Allocation Rate Per Person
+10. Non-Industry Income / Expenditure / Revenue
+
+The API returns the **top five absolute SHAP contributors** for an
+individual prediction.
+
+------------------------------------------------------------------------
+
+# 📈 Module 2 --- Stock Return Prediction
+
+The served stock workflow uses a **multivariate return-target LSTM** for
+**AAPL**.
+
+> The project is deliberately scoped to AAPL for the current
+> implementation. It does not claim to be a live general-purpose market
+> prediction platform.
+
+## Features
+
+``` text
+Open
+High
+Low
+Close
+Volume
+Daily Return
+Price Range
+SMA 10
+SMA 20
+EMA 10
+EMA 20
+Volatility 10
+Volume Change
+```
+
+### Sequence
+
+``` text
+60 historical trading days
+            ↓
+      LSTM model
+            ↓
+   Next-Day Return
+            ↓
+Projected Next-Day Close
+```
+
+## Architecture
+
+``` text
+LSTM(64)
+    ↓
+Dropout(0.2)
+    ↓
+LSTM(32)
+    ↓
+Dropout(0.2)
+    ↓
+Dense(1)
+```
+
+### Evaluation
+
+  Metric           Score
+  ------------- --------
+  Price MAE         5.06
+  Price RMSE        6.78
+  Price MAPE       1.61%
+  Return MAE      0.0162
+  Return RMSE     0.0217
+
+### Persistence Baseline
+
+``` text
+MAE  = 4.28
+RMSE = 6.08
+MAPE = 1.37%
+```
+
+The baseline comparison is intentionally included to avoid overstating
+the model's predictive ability.
+
+------------------------------------------------------------------------
+
+# 💹 Module 3 --- Financial Sentiment Analysis
+
+## Dataset
+
+**Financial PhraseBank**
+
+``` text
+Total examples: 2,264
+
+Train: 1,811
+Validation: 227
+Test: 226
+```
+
+Duplicate texts were prevented from crossing dataset splits.
+
+## Model
+
+Base model:
+
+``` text
+ProsusAI/finbert
+```
+
+Fine-tuning:
+
+``` text
+Learning Rate: 2e-5
+Batch Size: 8
+Epochs: 3
+Max Length: 128
+Weight Decay: 0.01
+Seed: 42
+```
+
+### Held-Out Test Results
+
+  Metric           Score
+  ------------- --------
+  Accuracy        97.79%
+  Macro F1        97.29%
+  Weighted F1     97.80%
+
+The API returns:
+
+-   Positive / Negative / Neutral sentiment
+-   Confidence
+-   Probability for each class
+
+------------------------------------------------------------------------
+
+# 📚 Module 4 --- Financial Research / RAG
+
+The RAG knowledge base currently contains Apple's **2024 Form 10-K /
+Annual Report**.
+
+## Document Pipeline
+
+``` text
+Apple 2024 Annual Report
+          ↓
+      PDF Extraction
+          ↓
+Structure-Aware Chunking
+          ↓
+      134 Chunks
+          ↓
+MiniLM Embeddings
+          ↓
+      FAISS Index
+          ↓
+ Semantic Retrieval
+          ↓
+    Gemini Answer
+          ↓
+ Answer + Sources
+```
+
+### Embeddings
+
+``` text
+Model:
+sentence-transformers/all-MiniLM-L6-v2
+
+Dimensions:
+384
+
+Similarity:
+Cosine similarity
+```
+
+### Retrieval Evaluation
+
+8 project questions were used for a small internal retrieval evaluation.
+
+  Metric       Result
+  ---------- --------
+  Recall@1      75.0%
+  Recall@3       100%
+  Recall@5       100%
+
+These results are a project-level evaluation, not a broad RAG benchmark.
+
+## Grounding & Safety
+
+The answer layer is designed to:
+
+-   Use retrieved passages as source material
+-   Generate answers only from retrieved context
+-   Return source references
+-   Say when available context is insufficient
+-   Avoid unsupported claims
+-   Ignore prompt-like instructions inside retrieved documents
+-   Avoid unnecessary Gemini calls when no useful context is retrieved
+
+------------------------------------------------------------------------
+
+# 🔌 API Architecture
+
+All versioned endpoints use:
+
+``` text
+/api/v1
+```
+
+  -----------------------------------------------------------------------------
+  Method                  Endpoint                      Purpose
+  ----------------------- ----------------------------- -----------------------
+  GET                     `/api/v1/health`              API health
+
+  POST                    `/api/v1/risk/predict`        Bankruptcy
+                                                        probability + SHAP
+
+  POST                    `/api/v1/stock/predict`       AAPL next-day return +
+                                                        projected close
+
+  POST                    `/api/v1/sentiment/predict`   Financial sentiment +
+                                                        probabilities
+
+  POST                    `/api/v1/rag/retrieve`        Retrieve relevant
+                                                        annual-report chunks
+
+  POST                    `/api/v1/rag/ask`             Grounded Gemini
+                                                        answer + sources
+  -----------------------------------------------------------------------------
+
+FastAPI also exposes interactive API documentation through `/docs`.
+
+------------------------------------------------------------------------
+
+# 🧪 Testing & Validation
+
+The project includes automated validation for:
+
+-   API health
+-   Risk inference
+-   Exact risk feature validation
+-   Stock inference
+-   Sentiment inference
+-   RAG retrieval
+-   RAG answer generation
+-   Empty-context behavior
+-   Prompt-injection resistance
+-   Artifact resolution
+
+### Validation Status
+
+``` text
+Backend test suite: 35 passed
+Frontend TypeScript check: PASS
+Frontend production build: PASS
+Docker image build: PASS
+Docker container startup: PASS
+Docker health endpoint: PASS
+```
+
+------------------------------------------------------------------------
+
+# 📦 ML Artifact Management
+
+Large model artifacts are intentionally kept outside the Git source
+tree.
+
+The production artifact bundle contains:
+
+``` text
+Risk
+├── XGBoost model
+└── model metadata
+
+Stock
+├── LSTM model
+├── feature scaler
+├── target scaler
+├── metadata
+└── engineered AAPL data
+
+Sentiment
+├── Fine-tuned FinBERT
+├── tokenizer
+└── model metadata
+
+RAG
+├── FAISS index
+├── embedding metadata
+├── embeddings
+└── index metadata
+```
+
+Artifacts are stored in a dedicated Hugging Face Model repository:
+
+👉 https://huggingface.co/Nandita10/finsight-ai-artifacts
+
+The backend contains an artifact resolver that can use local artifacts
+or retrieve missing production artifacts from the configured Hugging
+Face repository.
+
+------------------------------------------------------------------------
+
+# 🐳 Docker
+
+FinSight AI includes a multi-stage Docker setup.
+
+``` text
+Node.js stage
+      ↓
+Build React frontend
+      ↓
+Python 3.10 runtime
+      ↓
+FastAPI + ML/RAG services
+```
+
+### Build
+
+``` bash
+docker build -t finsight-ai:local .
+```
+
+### Run
+
+``` bash
+docker run --rm -p 8080:8080 --env-file .env finsight-ai:local
+```
+
+### Health Check
+
+``` text
+http://localhost:8080/api/v1/health
+```
+
+The container uses CPU-oriented PyTorch dependencies because the
+deployed inference workflows do not require a GPU.
+
+------------------------------------------------------------------------
+
+# 📁 Project Structure
+
+``` text
+FinSight-AI/
+│
+├── backend/
+│   ├── api/
+│   │   └── v1/
+│   ├── database/
+│   ├── models/
+│   ├── schemas/
+│   ├── services/
+│   │   ├── rag/
+│   │   ├── risk/
+│   │   ├── sentiment/
+│   │   └── stock/
+│   ├── config.py
+│   └── main.py
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── api.ts
+│   │   ├── App.tsx
+│   │   └── style.css
+│   └── package.json
+│
+├── ml/
+│   ├── risk_prediction/
+│   ├── sentiment/
+│   └── stock_prediction/
+│
+├── rag/
+│   ├── documents/
+│   ├── embeddings/
+│   ├── ingestion/
+│   └── retrieval/
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── notebooks/
+├── tests/
+├── Dockerfile
+├── requirements.txt
+├── requirements-docker.txt
+├── .dockerignore
+└── README.md
+```
+
+------------------------------------------------------------------------
+
+# ⚙️ Local Setup
+
+## 1. Clone
+
+``` bash
+git clone https://github.com/nan1027/FinSight-AI.git
+cd FinSight-AI
+```
+
+## 2. Create virtual environment
+
+### Windows
+
+``` powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+## 3. Install backend dependencies
+
+``` powershell
+python -m pip install -r requirements.txt
+```
+
+## 4. Configure environment
+
+Create `.env` from `.env.example`.
+
+``` env
+APP_NAME=FinSight AI
+APP_ENV=development
+API_V1_PREFIX=/api/v1
+
+GEMINI_API_KEY=your_gemini_api_key
+FINSIGHT_LLM_MODEL=gemini-3.5-flash-lite
+
+FINSIGHT_HF_REPO_ID=Nandita10/finsight-ai-artifacts
+HF_TOKEN=your_huggingface_token
+```
+
+Never commit API keys or `.env`.
+
+## 5. Start backend
+
+``` powershell
+python -m uvicorn main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+```
+
+## 6. Start frontend
+
+``` powershell
+cd frontend
 npm ci
 npm run dev
 ```
 
-Vite uses port `5173` by default and may select another port if `5173` is occupied. A frontend `frontend/.env` file is optional for the normal development setup. Without `VITE_API_BASE_URL`, the frontend uses the relative API base `/api/v1`, and Vite proxies `/api` requests to `http://127.0.0.1:8000`.
+Vite normally starts on:
 
-If you explicitly set `VITE_API_BASE_URL=http://localhost:8000/api/v1` (as shown in `frontend/.env.example`), requests go directly to FastAPI and use CORS rather than the Vite proxy. The example file is not loaded automatically; create `frontend/.env` to use that override.
-
-For frontend checks and a production build, run from `frontend/`:
-
-```powershell
-npm run typecheck
-npm run build
+``` text
+http://localhost:5173
 ```
 
-### Setup Caveats
+------------------------------------------------------------------------
 
-- `requirements.txt` declares TensorFlow, SHAP, FAISS, and pytest.
+# 🚀 Deployment Architecture
 
-- The current development environment was validated with Python 3.10.11, Node.js 24.13.0, and npm 11.21.0. These are tested development versions, not declared minimum requirements; the repository does not specify mandatory Python or Node.js/npm versions.
-- The `.gitignore` excludes several generated or local ML/RAG artifacts, including stock `.keras` models and scaler artifacts, processed stock data, the FinBERT model directory, RAG embedding JSONL files, and the FAISS index. Git tracking of these artifacts has not been verified, so a fresh clone may require acquisition or regeneration of ignored model/data artifacts before all inference workflows can run.
-- `/api/v1/health` reports API process health; it does not verify that the ML models or RAG artifacts are present or ready.
-- `GEMINI_API_KEY` is required for grounded answer generation when retrieved context is available. `/api/v1/rag/retrieve` does not require Gemini; `/api/v1/rag/ask` uses Gemini when retrieval returns context.
+``` text
+                    GitHub
+                       │
+              ┌────────┴────────┐
+              │                 │
+              ▼                 ▼
+          Vercel           Backend Runtime
+          Frontend             │
+                               ▼
+                         FastAPI Service
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+      XGBoost                LSTM                  FinBERT
+        │                      │                      │
+        └──────────────────────┼──────────────────────┘
+                               │
+                              RAG
+                               │
+                             Gemini
+                               │
+                               ▼
+                       Grounded Responses
+```
 
+### Current deployment
 
-## Environment Variables
+-   **Frontend:** deployed on Vercel
+-   **Backend:** Dockerized and deployment-ready
+-   **Artifacts:** stored separately on Hugging Face
+-   **Frontend/backend:** intentionally separated so the ML-heavy
+    backend can be scaled independently
 
-Set backend variables in a local `.env` file based on `.env.example`. Do not commit secrets.
+------------------------------------------------------------------------
 
-| Variable | Current default/example | Purpose |
-| --- | --- | --- |
-| `APP_NAME` | `FinSight AI` | FastAPI application title. |
-| `APP_ENV` | `development` | Application environment label. |
-| `API_V1_PREFIX` | `/api/v1` | Prefix for versioned API routes. |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000` | Comma-separated browser origins allowed by the backend. |
-| `GEMINI_API_KEY` | Empty in `.env.example` | Gemini credential used for answer generation. Supply it locally; do not publish it. |
-| `FINSIGHT_LLM_MODEL` | `gemini-3.5-flash-lite` | Gemini model used by the answer-generation provider. |
-| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Frontend API base URL, documented in `frontend/.env.example`. |
+# 🎯 Engineering Highlights
 
-For local Vite development, `frontend/.env` is optional: without the override, requests use `/api/v1` through the Vite proxy to `http://127.0.0.1:8000`. Setting `VITE_API_BASE_URL` to the example's absolute URL sends requests directly to FastAPI and relies on the backend's CORS configuration.
+FinSight AI demonstrates:
 
-## Limitations
+### Machine Learning
 
-- Stock inference is limited to AAPL and requires local model and data artifacts.
-- Stock output is a model prediction; the application does not provide live market data.
-- RAG answers are grounded in the local Apple 2024 Form 10-K corpus, not a general financial-document collection.
-- This project is not investment advice or a general financial research platform.
-- The reported sentiment and retrieval metrics describe repository evaluations only; they are not production performance guarantees.
-- No deployment or hosted-service configuration is documented here.
+-   Imbalanced binary classification
+-   XGBoost
+-   SHAP explainability
+-   Model evaluation
 
-## Future Improvements
+### Deep Learning
 
-Possible future work, not currently implemented, includes broader ticker and data support, live market-data integration, a richer financial-document corpus, expanded evaluation and monitoring, production deployment, and more complete dependency/artifact reproducibility.
+-   LSTM time-series modeling
+-   Multivariate feature engineering
+-   Return-target prediction
+-   Persistence baseline comparison
 
-## License
+### NLP
 
-A project license has not yet been specified. Review applicable dataset, source-document, and model terms before redistribution or use.
+-   Financial-domain language modeling
+-   FinBERT fine-tuning
+-   Stratified dataset splitting
+-   Held-out evaluation
 
+### Generative AI
 
+-   Gemini
+-   Retrieval-Augmented Generation
+-   Semantic search
+-   Grounded answers
+-   Source attribution
+-   Prompt-injection resistance
 
+### Software Engineering
 
+-   Modular FastAPI services
+-   Versioned REST APIs
+-   Pydantic validation
+-   Frontend/backend separation
+-   Automated testing
+-   Docker
+-   ML artifact resolution
+-   Production-oriented configuration
 
+------------------------------------------------------------------------
 
+# ⚠️ Limitations
 
+-   Stock prediction currently supports **AAPL only**.
+-   Stock inference uses historical/local data rather than a live
+    market-data feed.
+-   The RAG corpus currently focuses on Apple's 2024 annual report.
+-   Risk prediction depends on the exact 94-feature input schema.
+-   Model evaluation results are project-level experiments and are not
+    guarantees of real-world performance.
+-   FinSight AI is not financial advice.
+
+------------------------------------------------------------------------
+
+# 🔮 Future Improvements
+
+Planned extensions include:
+
+-   Broader stock/ticker support
+-   Live market-data integration
+-   Larger financial-document corpus
+-   More comprehensive RAG evaluation
+-   Model monitoring
+-   Portfolio-level risk analysis
+-   Additional financial datasets
+-   Production backend deployment and scaling
+-   Improved artifact versioning and reproducibility
+
+------------------------------------------------------------------------
+
+# 👩‍💻 Author
+
+## Nandita Rishishwar
+
+**B.Tech --- Computer Science & Engineering**\
+VIT Bhopal University
+
+### Links
+
+-   🌐 Live Demo: https://fin-sight-ai-flax-gamma.vercel.app/
+-   💻 GitHub: https://github.com/nan1027/FinSight-AI
+-   🤗 Hugging Face Artifacts:
+    https://huggingface.co/Nandita10/finsight-ai-artifacts
+
+------------------------------------------------------------------------
+
+## ⭐ FinSight AI
+
+**Turning financial data into explainable intelligence.**
